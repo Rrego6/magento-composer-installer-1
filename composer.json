@@ -39,14 +39,14 @@
         }
     ],
     "require":{
-        "composer-plugin-api": "^1.0|^2.0"
+        "composer-plugin-api": "^1.0 || ^2.0"
     },
     "require-dev":{
         "phpunit/phpunit":"*",
         "phpunit/phpunit-mock-objects": "dev-master",
         "squizlabs/php_codesniffer": "1.4.7",
         "firegento/phpcs": "dev-develop",
-        "composer/composer":"<=1.10.6",
+        "composer/composer":"<=1.10.6 || ^2.0",
         "symfony/process":"*",
         "mikey179/vfsstream":"*"
     },
