@@ -46,12 +46,13 @@
         "phpunit/phpunit-mock-objects": "dev-master",
         "squizlabs/php_codesniffer": "1.4.7",
         "firegento/phpcs": "dev-develop",
-        "composer/composer":"<=1.10.6|| ^2.0",
+        "composer/composer":"<=1.10.6 || ^2.0",
         "symfony/process":"*",
         "mikey179/vfsstream":"*"
     },
-    "replace": {
-        "magento-hackathon/magento-composer-installer": "*"
+    "replace": [
+        "magento-hackathon/magento-composer-installer": "*",
+        "magento/magento-composer-installer": "*"
     },
     "autoload":{
         "psr-0":{
