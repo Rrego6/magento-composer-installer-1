@@ -50,7 +50,7 @@
         "symfony/process":"*",
         "mikey179/vfsstream":"*"
     },
-    "replace": [
+    "replace": {
         "magento-hackathon/magento-composer-installer": "*",
         "magento/magento-composer-installer": "*"
     },
