@@ -408,16 +408,15 @@ class Installer extends LibraryInstaller implements InstallerInterface
         }
 
         $promise = parent::install($repo, $package);
-        if ($promise instanceof PromiseInterface) {
-            $promise->then(
-                function () use ($package)
-                {
-                    $this->installerHelper($package);
-                }
-            );
-        } else {
-            $this->installerHelper($package);
+        if (!$promise instanceof PromiseInterface) {
+            $promise = \React\Promise\resolve();
         }
+        $promise->then(
+            function () use ($package)
+            {
+                $this->installerHelper($package);
+            }
+        );
     }
 
     private function installerHelper($package) {
@@ -631,25 +630,32 @@ class Installer extends LibraryInstaller implements InstallerInterface
             }
         }
 
-        parent::update($repo, $initial, $target);
+        $promise = parent::update($repo, $initial, $target);
 
-        // marshal files for new package version if extra->map exist
-        if ($this->hasExtraMap($target)) {
-            $targetStrategy = $this->getDeployStrategy($target);
-            $targetStrategy->setMappings($this->getParser($target)->getMappings());
-            $deployManagerEntry = new Entry();
-            $deployManagerEntry->setPackageName($target->getName());
-            $deployManagerEntry->setDeployStrategy($targetStrategy);
-            $this->deployManager->addPackage($deployManagerEntry);
+        if (!$promise instanceof PromiseInterface) {
+            $promise =  \React\Promise\resolve();
         }
 
-        if($this->appendGitIgnore) {
-            $this->appendGitIgnore($target, $this->getGitIgnoreFileLocation());
-        }
+        return $promise->then( function () use ($target) {
+            // marshal files for new package version if extra->map exist
+            if ($this->hasExtraMap($target)) {
+                $targetStrategy = $this->getDeployStrategy($target);
+                $targetStrategy->setMappings($this->getParser($target)->getMappings());
+                $deployManagerEntry = new Entry();
+                $deployManagerEntry->setPackageName($target->getName());
+                $deployManagerEntry->setDeployStrategy($targetStrategy);
+                $this->deployManager->addPackage($deployManagerEntry);
+            }
 
-        if ($target->getType() === 'magento-core') {
-            $this->postUpdateMagentoCore();
+            if ($this->appendGitIgnore) {
+                $this->appendGitIgnore($target, $this->getGitIgnoreFileLocation());
+            }
+
+            if ($target->getType() === 'magento-core') {
+                $this->postUpdateMagentoCore();
+            }
         }
+        );
     }
 
 
@@ -729,8 +735,11 @@ class Installer extends LibraryInstaller implements InstallerInterface
     {
         // skip marshal and apply default behavior if extra->map does not exist
         if (!$this->hasExtraMap($package)) {
-            parent::uninstall($repo, $package);
-            return;
+            $promise = parent::uninstall($repo, $package);
+            if (!$promise instanceof PromiseInterface) {
+                return \React\Promise\resolve();
+            }
+            return $promise;
         }
 
         $strategy = $this->getDeployStrategy($package);
@@ -743,7 +752,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
             }
         }
 
-        parent::uninstall($repo, $package);
+        return parent::uninstall($repo, $package);
     }
 
     /**
