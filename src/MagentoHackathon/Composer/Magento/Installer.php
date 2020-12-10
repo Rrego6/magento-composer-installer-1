@@ -745,7 +745,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
         }
 
         $afterUninstall = function () {
-            return;
+            // do nothing
         };
 
         $promise = parent::uninstall($repo, $package);
