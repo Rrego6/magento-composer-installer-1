@@ -15,6 +15,7 @@ use Composer\Installer\LibraryInstaller;
 use Composer\Installer\InstallerInterface;
 use Composer\Package\PackageInterface;
 use MagentoHackathon\Composer\Magento\Deploy\Manager\Entry;
+use React\Promise\PromiseInterface;
 
 /**
  * Composer Magento Installer
@@ -406,8 +407,20 @@ class Installer extends LibraryInstaller implements InstallerInterface
             return;
         }
 
-        parent::install($repo, $package);
+        $promise = parent::install($repo, $package);
+        if ($promise instanceof PromiseInterface) {
+            $promise->then(
+                function () use ($package)
+                {
+                    $this->installerHelper($package);
+                }
+            );
+        } else {
+            $this->installerHelper($package);
+        }
+    }
 
+    private function installerHelper($package) {
         // skip marshal and apply default behavior if extra->map does not exist
         if (!$this->hasExtraMap($package)) {
             return;
