@@ -100,7 +100,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
      * @var bool
      */
     protected $appendGitIgnore = false;
-    
+
     /**
      * @var array Path mapping prefixes that need to be translated (i.e. to
      * use a public directory as the web server root).
@@ -202,7 +202,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
         $this->deployManager = $deployManager;
     }
 
-    
+
     public function setConfig( ProjectConfig $config )
     {
         $this->config = $config;
@@ -330,7 +330,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
             }
             if( isset($extra['magento-deploy-ignore'][$package->getName()]) ){
                 $moduleSpecificDeployIgnores = array_merge(
-                    $moduleSpecificDeployIgnores, 
+                    $moduleSpecificDeployIgnores,
                     $extra['magento-deploy-ignore'][$package->getName()]
                 );
             }
@@ -402,39 +402,35 @@ class Installer extends LibraryInstaller implements InstallerInterface
      */
     public function install(InstalledRepositoryInterface $repo, PackageInterface $package)
     {
-
         if ($package->getType() === 'magento-core' && !$this->preInstallMagentoCore()) {
             return;
         }
 
-        $promise = parent::install($repo, $package);
-        if (!$promise instanceof PromiseInterface) {
-            $promise = \React\Promise\resolve();
-        }
-        $promise->then(
-            function () use ($package)
-            {
-                $this->installerHelper($package);
+        $afterInstall = function () use ($package) {
+            // skip marshal and apply default behavior if extra->map does not exist
+            if ($this->hasExtraMap($package)) {
+                $strategy = $this->getDeployStrategy($package);
+                $strategy->setMappings($this->getParser($package)->getMappings());
+                $deployManagerEntry = new Entry();
+                $deployManagerEntry->setPackageName($package->getName());
+                $deployManagerEntry->setDeployStrategy($strategy);
+                $this->deployManager->addPackage($deployManagerEntry);
+
+                if ($this->appendGitIgnore) {
+                    $this->appendGitIgnore($package, $this->getGitIgnoreFileLocation());
+                }
             }
-        );
-    }
+        };
 
-    private function installerHelper($package) {
-        // skip marshal and apply default behavior if extra->map does not exist
-        if (!$this->hasExtraMap($package)) {
-            return;
+        $promise = parent::install($repo, $package);
+
+        // Composer v2 might return a promise here
+        if ($promise instanceof PromiseInterface) {
+            return $promise->then($afterInstall);
         }
 
-        $strategy = $this->getDeployStrategy($package);
-        $strategy->setMappings($this->getParser($package)->getMappings());
-        $deployManagerEntry = new Entry();
-        $deployManagerEntry->setPackageName($package->getName());
-        $deployManagerEntry->setDeployStrategy($strategy);
-        $this->deployManager->addPackage($deployManagerEntry);
-
-        if ($this->appendGitIgnore) {
-            $this->appendGitIgnore($package, $this->getGitIgnoreFileLocation());
-        }
+        // If not, execute the code right away as parent::install executed synchronously (composer v1, or v2 without async)
+        $afterInstall();
     }
 
     /**
@@ -476,7 +472,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
                 if( in_array($ignore, $ignoredMappings) ){
                     continue;
                 }
-                
+
                 $additions[] = $ignore;
             }
         }
@@ -486,7 +482,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
             $contents = array_merge($contents, $additions);
             file_put_contents($ignoreFile, implode("\n", $contents));
         }
-        
+
         if ($package->getType() === 'magento-core') {
             $this->prepareMagentoCore();
         }
@@ -612,7 +608,6 @@ class Installer extends LibraryInstaller implements InstallerInterface
      */
     public function update(InstalledRepositoryInterface $repo, PackageInterface $initial, PackageInterface $target)
     {
-
         if ($target->getType() === 'magento-core' && !$this->preUpdateMagentoCore()) {
             return;
         }
@@ -630,13 +625,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
             }
         }
 
-        $promise = parent::update($repo, $initial, $target);
-
-        if (!$promise instanceof PromiseInterface) {
-            $promise =  \React\Promise\resolve();
-        }
-
-        return $promise->then( function () use ($target) {
+        $afterUpdate = function () use ($target) {
             // marshal files for new package version if extra->map exist
             if ($this->hasExtraMap($target)) {
                 $targetStrategy = $this->getDeployStrategy($target);
@@ -647,15 +636,24 @@ class Installer extends LibraryInstaller implements InstallerInterface
                 $this->deployManager->addPackage($deployManagerEntry);
             }
 
-            if ($this->appendGitIgnore) {
+            if($this->appendGitIgnore) {
                 $this->appendGitIgnore($target, $this->getGitIgnoreFileLocation());
             }
 
             if ($target->getType() === 'magento-core') {
                 $this->postUpdateMagentoCore();
             }
+        };
+
+        $promise = parent::update($repo, $initial, $target);
+
+        // Composer v2 might return a promise here
+        if ($promise instanceof PromiseInterface) {
+            return $promise->then($afterUpdate);
         }
-        );
+
+        // If not, execute the code right away as parent::update executed synchronously (composer v1, or v2 without async)
+        $afterUpdate();
     }
 
 
@@ -734,25 +732,31 @@ class Installer extends LibraryInstaller implements InstallerInterface
     public function uninstall(InstalledRepositoryInterface $repo, PackageInterface $package)
     {
         // skip marshal and apply default behavior if extra->map does not exist
-        if (!$this->hasExtraMap($package)) {
-            $promise = parent::uninstall($repo, $package);
-            if (!$promise instanceof PromiseInterface) {
-                return \React\Promise\resolve();
-            }
-            return $promise;
-        }
-
-        $strategy = $this->getDeployStrategy($package);
-        $strategy->setMappings($this->getParser($package)->getMappings());
-        try {
-            $strategy->clean();
-        } catch (\ErrorException $e) {
-            if ($this->io->isDebug()) {
-                $this->io->write($e->getMessage());
+        if ($this->hasExtraMap($package)) {
+            $strategy = $this->getDeployStrategy($package);
+            $strategy->setMappings($this->getParser($package)->getMappings());
+            try {
+                $strategy->clean();
+            } catch (\ErrorException $e) {
+                if ($this->io->isDebug()) {
+                    $this->io->write($e->getMessage());
+                }
             }
         }
 
-        return parent::uninstall($repo, $package);
+        $afterUninstall = function () {
+            return;
+        };
+
+        $promise = parent::uninstall($repo, $package);
+
+        // Composer v2 might return a promise here
+        if ($promise instanceof PromiseInterface) {
+            return $promise->then($afterUninstall);
+        }
+
+        // If not, execute the code right away as parent::uninstall executed synchronously (composer v1, or v2 without async)
+        $afterUninstall();
     }
 
     /**
@@ -814,7 +818,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
 
         return $installPath;
     }
-    
+
     public function transformArrayKeysToLowerCase($array)
     {
         $arrayNew = array();
@@ -828,7 +832,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
      * this function is for annoying people with messages.
      *
      * First usage: get people to vote about the future release of composer so later I can say "you wanted it this way"
-     * 
+     *
      * @param IOInterface $io
      */
     public function annoy(IOInterface $io)
@@ -841,7 +845,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
         $io->write('<comment> time for voting about the future of the #magento #composer installer. </comment>', true);
         $io->write('<comment> https://github.com/magento-hackathon/magento-composer-installer/blob/discussion-master/Milestone/2/index.md </comment>', true);
         $io->write('<error> For the case you don\'t vote, I will ignore your problems till iam finished with the resulting release. </error>', true);
-         * 
+         *
          **/
     }
 
