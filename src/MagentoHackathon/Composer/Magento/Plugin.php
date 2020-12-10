@@ -11,11 +11,9 @@ namespace MagentoHackathon\Composer\Magento;
 use Composer\Composer;
 use Composer\IO\IOInterface;
 use Composer\Plugin\PluginInterface;
-use Composer\Plugin\PluginEvents;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
-use Composer\Installer\PackageEvents;
 use Composer\Util\Filesystem;
 
 class Plugin implements PluginInterface, EventSubscriberInterface
