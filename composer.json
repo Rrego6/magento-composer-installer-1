@@ -6,12 +6,6 @@
     "type":"composer-plugin",
     "license":"OSL-3.0",
     "homepage":"https://github.com/magento/magento-composer-installer",
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "git@github.com:firegento/phpcs.git"
-        }
-    ],
     "authors":[
         {
             "name":"Daniel Fahlke aka Flyingmana",
@@ -42,16 +36,11 @@
         "composer-plugin-api": "^1.0|^2.0"
     },
     "require-dev":{
-        "phpunit/phpunit":"*",
-        "phpunit/phpunit-mock-objects": "dev-master",
-        "squizlabs/php_codesniffer": "1.4.7",
-        "firegento/phpcs": "dev-develop",
-        "composer/composer":"<=1.10.6|| ^2.0",
-        "symfony/process":"*",
-        "mikey179/vfsstream":"*"
+        "composer/composer":"<=1.10.6|| ^2.0"
     },
     "replace": {
-        "magento-hackathon/magento-composer-installer": "*"
+        "magento-hackathon/magento-composer-installer": "*",
+        "magento/magento-composer-installer": "*"
     },
     "autoload":{
         "psr-0":{
