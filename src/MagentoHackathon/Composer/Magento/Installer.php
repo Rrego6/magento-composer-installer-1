@@ -395,49 +395,6 @@ class Installer extends LibraryInstaller implements InstallerInterface
     }
 
     /**
-     * Installs specific package
-     *
-     * @param InstalledRepositoryInterface $repo    repository in which to check
-     * @param PackageInterface             $package package instance
-     */
-    public function install(InstalledRepositoryInterface $repo, PackageInterface $package)
-    {
-
-        if ($package->getType() === 'magento-core' && !$this->preInstallMagentoCore()) {
-            return;
-        }
-
-        $promise = parent::install($repo, $package);
-        if (!$promise instanceof PromiseInterface) {
-            $promise = \React\Promise\resolve();
-        }
-        $promise->then(
-            function () use ($package)
-            {
-                $this->installerHelper($package);
-            }
-        );
-    }
-
-    private function installerHelper($package) {
-        // skip marshal and apply default behavior if extra->map does not exist
-        if (!$this->hasExtraMap($package)) {
-            return;
-        }
-
-        $strategy = $this->getDeployStrategy($package);
-        $strategy->setMappings($this->getParser($package)->getMappings());
-        $deployManagerEntry = new Entry();
-        $deployManagerEntry->setPackageName($package->getName());
-        $deployManagerEntry->setDeployStrategy($strategy);
-        $this->deployManager->addPackage($deployManagerEntry);
-
-        if ($this->appendGitIgnore) {
-            $this->appendGitIgnore($package, $this->getGitIgnoreFileLocation());
-        }
-    }
-
-    /**
      * Get .gitignore file location
      *
      * @return string
@@ -601,63 +558,6 @@ class Installer extends LibraryInstaller implements InstallerInterface
         return;
     }
 
-    /**
-     * Updates specific package
-     *
-     * @param InstalledRepositoryInterface $repo    repository in which to check
-     * @param PackageInterface             $initial already installed package version
-     * @param PackageInterface             $target  updated version
-     *
-     * @throws InvalidArgumentException if $from package is not installed
-     */
-    public function update(InstalledRepositoryInterface $repo, PackageInterface $initial, PackageInterface $target)
-    {
-
-        if ($target->getType() === 'magento-core' && !$this->preUpdateMagentoCore()) {
-            return;
-        }
-
-        // cleanup marshaled files if extra->map exist
-        if ($this->hasExtraMap($initial)) {
-            $initialStrategy = $this->getDeployStrategy($initial);
-            $initialStrategy->setMappings($this->getParser($initial)->getMappings());
-            try {
-                $initialStrategy->clean();
-            } catch (\ErrorException $e) {
-                if ($this->io->isDebug()) {
-                    $this->io->write($e->getMessage());
-                }
-            }
-        }
-
-        $promise = parent::update($repo, $initial, $target);
-
-        if (!$promise instanceof PromiseInterface) {
-            $promise =  \React\Promise\resolve();
-        }
-
-        return $promise->then( function () use ($target) {
-            // marshal files for new package version if extra->map exist
-            if ($this->hasExtraMap($target)) {
-                $targetStrategy = $this->getDeployStrategy($target);
-                $targetStrategy->setMappings($this->getParser($target)->getMappings());
-                $deployManagerEntry = new Entry();
-                $deployManagerEntry->setPackageName($target->getName());
-                $deployManagerEntry->setDeployStrategy($targetStrategy);
-                $this->deployManager->addPackage($deployManagerEntry);
-            }
-
-            if ($this->appendGitIgnore) {
-                $this->appendGitIgnore($target, $this->getGitIgnoreFileLocation());
-            }
-
-            if ($target->getType() === 'magento-core') {
-                $this->postUpdateMagentoCore();
-            }
-        }
-        );
-    }
-
 
     protected function preUpdateMagentoCore() {
         if (!$this->io->askConfirmation('<info>Are you sure you want to manipulate the Magento core installation</info> [<comment>Y,n</comment>]? ', true)) {
@@ -724,37 +624,6 @@ class Installer extends LibraryInstaller implements InstallerInterface
             }
         }
     }
-
-    /**
-     * Uninstalls specific package.
-     *
-     * @param InstalledRepositoryInterface $repo    repository in which to check
-     * @param PackageInterface             $package package instance
-     */
-    public function uninstall(InstalledRepositoryInterface $repo, PackageInterface $package)
-    {
-        // skip marshal and apply default behavior if extra->map does not exist
-        if (!$this->hasExtraMap($package)) {
-            $promise = parent::uninstall($repo, $package);
-            if (!$promise instanceof PromiseInterface) {
-                return \React\Promise\resolve();
-            }
-            return $promise;
-        }
-
-        $strategy = $this->getDeployStrategy($package);
-        $strategy->setMappings($this->getParser($package)->getMappings());
-        try {
-            $strategy->clean();
-        } catch (\ErrorException $e) {
-            if ($this->io->isDebug()) {
-                $this->io->write($e->getMessage());
-            }
-        }
-
-        return parent::uninstall($repo, $package);
-    }
-
     /**
      * Returns the modman parser for the vendor dir
      *
