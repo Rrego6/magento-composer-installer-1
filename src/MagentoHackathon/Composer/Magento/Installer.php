@@ -744,19 +744,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
             }
         }
 
-        $afterUninstall = function () {
-            // do nothing
-        };
-
-        $promise = parent::uninstall($repo, $package);
-
-        // Composer v2 might return a promise here
-        if ($promise instanceof PromiseInterface) {
-            return $promise->then($afterUninstall);
-        }
-
-        // If not, execute the code right away as parent::uninstall executed synchronously (composer v1, or v2 without async)
-        $afterUninstall();
+        return parent::uninstall($repo, $package);
     }
 
     /**
