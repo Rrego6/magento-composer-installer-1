@@ -395,10 +395,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
     }
 
     /**
-     * Installs specific package
-     *
-     * @param InstalledRepositoryInterface $repo    repository in which to check
-     * @param PackageInterface             $package package instance
+     * @inheritdoc
      */
     public function install(InstalledRepositoryInterface $repo, PackageInterface $package)
     {
@@ -598,13 +595,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
     }
 
     /**
-     * Updates specific package
-     *
-     * @param InstalledRepositoryInterface $repo    repository in which to check
-     * @param PackageInterface             $initial already installed package version
-     * @param PackageInterface             $target  updated version
-     *
-     * @throws InvalidArgumentException if $from package is not installed
+     * @inheritdoc
      */
     public function update(InstalledRepositoryInterface $repo, PackageInterface $initial, PackageInterface $target)
     {
