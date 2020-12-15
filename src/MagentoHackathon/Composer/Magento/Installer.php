@@ -724,10 +724,7 @@ class Installer extends LibraryInstaller implements InstallerInterface
     }
 
     /**
-     * Uninstalls specific package.
-     *
-     * @param InstalledRepositoryInterface $repo    repository in which to check
-     * @param PackageInterface             $package package instance
+     * @inheritdoc
      */
     public function uninstall(InstalledRepositoryInterface $repo, PackageInterface $package)
     {
